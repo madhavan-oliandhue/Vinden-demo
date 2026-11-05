@@ -256,20 +256,36 @@ export class ApiError extends Error {
 const PERSONA_KEY = 'vinden.as';
 export const VISITOR = 'visitor';
 
+/** The persona for this page load, used when storage is blocked. */
+let chosen: string | null = null;
+
 export function getPersona(): string {
   try {
-    return localStorage.getItem(PERSONA_KEY) || 'ishaan';
+    return localStorage.getItem(PERSONA_KEY) || chosen || 'ishaan';
   } catch {
-    return 'ishaan';
+    return chosen || 'ishaan';
   }
 }
 
 function storePersona(as: string) {
+  chosen = as;
   try {
     localStorage.setItem(PERSONA_KEY, as);
   } catch {
     // Storage blocked: the choice lasts until the page reloads.
   }
+}
+
+/**
+ * A link can open the demo as a persona with ?as=<handle>, e.g. the feature register's "Review on Vercel" links.
+ * The choice is kept like a switch in the demo bar, and the parameter is taken out of the address.
+ */
+const linked = new URLSearchParams(location.search).get('as');
+if (linked && /^[a-z0-9-]+$/.test(linked)) {
+  storePersona(linked);
+  const url = new URL(location.href);
+  url.searchParams.delete('as');
+  history.replaceState(history.state, '', url);
 }
 
 /** Switch persona: forget everything cached for the last one, then go to Home (or `to`). */
